@@ -243,10 +243,327 @@ The project follows the **Rumsfeld Risk Matrix** framework:
   - [x] tests/security/access-control.test.js (45 tests)
   - [x] jest.config.js (test configuration)
 
+### Completed (Chaos Engineering Tests)
+
+- [x] **Chaos engineering tests for resilience (52 tests, all passing)**:
+  - [x] tests/chaos/chaos-engineering.test.js (52 tests)
+    - RPC Failure Cascade (10 tests) - Health tracking, failover, recovery
+    - Nonce Gap Recovery (8 tests) - Stuck tx detection, cleanup, concurrency
+    - MEV Sandwich Simulation (9 tests) - Risk analysis, routing, protection
+    - Malicious Contract Detection (9 tests) - Selectors, drainers, validation
+    - Stablecoin Depeg Response (10 tests) - Thresholds, slippage, oracles
+    - System-Wide Chaos (6 tests) - Emergency stop, shutdown, status
+
 ### Not Started
 
-- [ ] Chaos engineering tests
 - [ ] Sprint 1.2: MEV Protection & Monitoring enhancements
+
+---
+
+## Sprint 1.2: MEV Protection & Monitoring - DETAILED SPECIFICATIONS
+
+> **STATUS**: READY FOR IMPLEMENTATION
+> **Priority**: HIGH - Pre-production requirement
+
+Sprint 1.2 enhances the existing MEV protection module and adds comprehensive monitoring capabilities.
+
+### 1.2.1 Transaction Simulation Engine
+
+**File**: `src/security/tx-simulator.js`
+**Status**: TO BE IMPLEMENTED
+
+**WHY**: Pre-execution simulation prevents failed transactions and detects MEV attacks before they happen. Tenderly reports 15-20% of DeFi transactions fail on first attempt.
+
+**Architecture**:
+```
+SIMULATION FLOW:
+┌─────────────────────────────────────────────────────────────────────────┐
+│  1. Build Transaction                                                   │
+│     └── Construct calldata, set gas estimates                          │
+│                                                                         │
+│  2. Fork State Simulation                                               │
+│     ├── eth_call against current state                                 │
+│     ├── Trace execution path                                           │
+│     └── Detect state changes                                           │
+│                                                                         │
+│  3. Output Validation                                                   │
+│     ├── Expected vs actual token amounts                               │
+│     ├── Gas usage estimation                                           │
+│     └── Revert detection with reason                                   │
+│                                                                         │
+│  4. MEV Risk Assessment                                                 │
+│     ├── Compare simulated output to quoted output                      │
+│     ├── Flag if difference > slippage tolerance                        │
+│     └── Recommend private submission if high risk                      │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**Key Implementation Details**:
+- Use `eth_call` with state overrides for simulation
+- Parse revert reasons using error selectors
+- Track gas estimation accuracy over time
+- Integration with Tenderly API (optional, for detailed traces)
+- Fallback to local simulation if API unavailable
+
+**Interface**:
+```javascript
+class TxSimulator {
+  async simulate(tx, provider) → { success, gasUsed, returnData, stateChanges }
+  async simulateBundle(txs, provider) → { results[], bundleSuccess }
+  async estimateOutput(swapTx, provider) → { expectedOutput, confidence }
+  parseRevertReason(error) → { reason, selector }
+}
+```
+
+---
+
+### 1.2.2 Sandwich Attack Detection
+
+**File**: `src/monitoring/sandwich-detector.js`
+**Status**: TO BE IMPLEMENTED
+
+**WHY**: Post-execution analysis identifies if transactions were sandwiched, enabling learning and adaptation of protection strategies.
+
+**Architecture**:
+```
+DETECTION ALGORITHM:
+┌─────────────────────────────────────────────────────────────────────────┐
+│  1. Get Block Transactions                                              │
+│     └── Fetch all txs in same block as target tx                       │
+│                                                                         │
+│  2. Identify Candidate Sandwiches                                       │
+│     ├── Same token pair transactions                                   │
+│     ├── Within ±5 tx index of target                                   │
+│     └── Different sender (attacker EOA/contract)                       │
+│                                                                         │
+│  3. Validate Sandwich Pattern                                           │
+│     ├── Tx before: Buy target token (frontrun)                         │
+│     ├── Target tx: User's swap                                         │
+│     └── Tx after: Sell target token (backrun)                          │
+│                                                                         │
+│  4. Calculate Extraction                                                │
+│     ├── User's price impact vs expected                                │
+│     ├── Attacker's profit (backrun - frontrun - gas)                   │
+│     └── Percentage of swap value extracted                             │
+│                                                                         │
+│  5. Record & Alert                                                      │
+│     ├── Log to analytics database                                      │
+│     ├── Alert if extraction > 0.5%                                     │
+│     └── Update protection strategy weights                             │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**Key Implementation Details**:
+- Parse swap event logs to identify token movements
+- Use block explorers or archive nodes for historical analysis
+- Maintain attacker address database
+- Calculate MEV extraction metrics over time
+
+**Interface**:
+```javascript
+class SandwichDetector {
+  async analyzeTransaction(txHash, provider) → { wasSandwiched, details }
+  async getBlockSandwiches(blockNumber, provider) → SandwichEvent[]
+  async getExtractionStats(wallet, days) → { totalExtracted, avgPerTx }
+  isKnownAttacker(address) → boolean
+}
+```
+
+---
+
+### 1.2.3 Real-Time Monitoring Dashboard
+
+**File**: `src/monitoring/dashboard.js`
+**Status**: TO BE IMPLEMENTED
+
+**WHY**: Operators need visibility into bot operations, transaction status, and security events in real-time.
+
+**Architecture**:
+```
+DASHBOARD COMPONENTS:
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         MONITORING DASHBOARD                            │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌─────────────────────┐  ┌─────────────────────┐  ┌────────────────┐  │
+│  │  TRANSACTION FEED   │  │   WALLET STATUS     │  │  MEV METRICS   │  │
+│  │                     │  │                     │  │                │  │
+│  │  • Pending txs      │  │  • Balances         │  │  • Sandwiches  │  │
+│  │  • Confirmed txs    │  │  • Nonce status     │  │  • Extraction  │  │
+│  │  • Failed txs       │  │  • Approvals        │  │  • Protection  │  │
+│  │  • Gas costs        │  │  • Health           │  │  • Savings     │  │
+│  └─────────────────────┘  └─────────────────────┘  └────────────────┘  │
+│                                                                         │
+│  ┌─────────────────────┐  ┌─────────────────────┐  ┌────────────────┐  │
+│  │   RPC HEALTH        │  │   ORACLE STATUS     │  │  ALERTS        │  │
+│  │                     │  │                     │  │                │  │
+│  │  • Provider status  │  │  • Price freshness  │  │  • Security    │  │
+│  │  • Latency          │  │  • Deviation        │  │  • Errors      │  │
+│  │  • Failovers        │  │  • L2 sequencer     │  │  • Warnings    │  │
+│  │  • Rate limits      │  │  • Confidence       │  │  • Info        │  │
+│  └─────────────────────┘  └─────────────────────┘  └────────────────┘  │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**Key Implementation Details**:
+- Event-driven architecture using EventEmitter
+- WebSocket support for real-time updates
+- Aggregated metrics with configurable time windows
+- Export to Prometheus/Grafana (optional)
+- CLI and web interface options
+
+**Interface**:
+```javascript
+class Dashboard {
+  constructor(securityLayer, config)
+  start() → void
+  stop() → void
+  getStatus() → DashboardStatus
+  subscribe(event, callback) → unsubscribe
+  exportMetrics(format) → string
+}
+```
+
+---
+
+### 1.2.4 Alert System
+
+**File**: `src/monitoring/alerts.js`
+**Status**: TO BE IMPLEMENTED
+
+**WHY**: Operators need immediate notification of security events, failures, and anomalies to take action.
+
+**Architecture**:
+```
+ALERT CATEGORIES:
+┌─────────────────────────────────────────────────────────────────────────┐
+│  CRITICAL (Immediate action required)                                   │
+│  ├── Emergency stop activated                                          │
+│  ├── Suspected exploit/attack                                          │
+│  ├── Private key usage anomaly                                         │
+│  ├── All RPCs failing                                                  │
+│  └── Wallet balance critically low                                     │
+│                                                                         │
+│  HIGH (Action within 1 hour)                                            │
+│  ├── Transaction sandwich detected (>1% extraction)                   │
+│  ├── Oracle price deviation warning                                    │
+│  ├── Multiple transaction failures                                     │
+│  ├── Stuck transaction detected                                        │
+│  └── RPC failover triggered                                            │
+│                                                                         │
+│  MEDIUM (Action within 24 hours)                                        │
+│  ├── Gas prices unusually high                                         │
+│  ├── Approval audit needed                                             │
+│  ├── Key rotation due                                                  │
+│  └── Slippage threshold exceeded                                       │
+│                                                                         │
+│  LOW (Informational)                                                    │
+│  ├── Transaction confirmed                                             │
+│  ├── Daily summary                                                     │
+│  └── Configuration changes                                             │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**Delivery Channels**:
+- Discord webhook (existing integration)
+- Telegram bot (existing integration)
+- Console logging (always)
+- Email (optional, SMTP integration)
+- PagerDuty/OpsGenie (optional, for on-call)
+
+**Key Implementation Details**:
+- Rate limiting to prevent alert fatigue
+- Alert deduplication within time window
+- Escalation rules (HIGH → CRITICAL if unacknowledged)
+- Alert history and acknowledgment tracking
+
+**Interface**:
+```javascript
+class AlertSystem {
+  constructor(config)
+  sendAlert(level, category, message, data) → Promise<void>
+  acknowledge(alertId) → void
+  mute(category, duration) → void
+  getAlertHistory(filter) → Alert[]
+  setThresholds(thresholds) → void
+}
+```
+
+---
+
+### 1.2.5 Analytics & Reporting
+
+**File**: `src/monitoring/analytics.js`
+**Status**: TO BE IMPLEMENTED
+
+**WHY**: Long-term analysis of bot performance, MEV extraction, gas efficiency, and profitability enables optimization.
+
+**Metrics to Track**:
+```
+PERFORMANCE METRICS:
+├── Transaction success rate (by chain, protocol)
+├── Average gas cost per transaction type
+├── Slippage: expected vs actual
+├── MEV extraction suffered
+├── MEV protection savings
+├── Wallet P&L over time
+
+OPERATIONAL METRICS:
+├── RPC uptime and latency
+├── Failover frequency
+├── Nonce management efficiency
+├── Key usage patterns
+├── Alert frequency by category
+
+AIRDROP METRICS:
+├── Activity diversity score
+├── Protocol interaction count
+├── Estimated points/eligibility
+└── Wallet "health" score
+```
+
+**Key Implementation Details**:
+- Time-series storage (SQLite for MVP, TimescaleDB for production)
+- Configurable retention periods
+- Export to CSV/JSON for external analysis
+- Scheduled report generation
+
+**Interface**:
+```javascript
+class Analytics {
+  recordEvent(type, data) → void
+  getMetrics(metric, timeRange) → MetricData[]
+  generateReport(reportType, options) → Report
+  getPerformanceSummary(wallet, days) → Summary
+}
+```
+
+---
+
+### Sprint 1.2 Implementation Order
+
+| Order | Module | Estimated Effort | Dependencies |
+|-------|--------|------------------|--------------|
+| 1 | tx-simulator.js | Medium | mev-protection.js |
+| 2 | alerts.js | Low | logger, notifications |
+| 3 | sandwich-detector.js | Medium | tx-simulator.js |
+| 4 | analytics.js | Medium | All security modules |
+| 5 | dashboard.js | High | All above modules |
+
+### Sprint 1.2 Testing Requirements
+
+**Unit Tests**:
+- [ ] tx-simulator.test.js
+- [ ] sandwich-detector.test.js
+- [ ] dashboard.test.js
+- [ ] alerts.test.js
+- [ ] analytics.test.js
+
+**Integration Tests**:
+- [ ] Full MEV detection flow
+- [ ] Alert escalation paths
+- [ ] Dashboard real-time updates
 
 ---
 
