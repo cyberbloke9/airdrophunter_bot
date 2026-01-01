@@ -1,19 +1,44 @@
 {
-  "name": "airdrop_hunter",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "airdrop-hunter-bot",
+  "version": "2.0.0",
+  "description": "AI-powered Web3 automation bot for token swaps, transfers, and airdrop hunting",
+  "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/index.js",
+    "dev": "netlify dev",
+    "test": "jest",
+    "lint": "eslint src/",
+    "build": "netlify build"
   },
-  "keywords": [],
+  "keywords": [
+    "web3",
+    "ethereum",
+    "defi",
+    "airdrop",
+    "uniswap",
+    "blockchain",
+    "ai",
+    "automation"
+  ],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
-    "@netlify/functions": "^1.4.0",
-    "@openzeppelin/contracts": "^4.8.1",
+    "@netlify/functions": "^2.4.0",
+    "@openzeppelin/contracts": "^4.9.3",
     "@uniswap/v2-periphery": "^1.1.0-beta.0",
-    "dotenv": "^16.0.3",
+    "dotenv": "^16.3.1",
     "ethers": "^5.7.2"
+  },
+  "optionalDependencies": {
+    "openai": "^4.20.0",
+    "@anthropic-ai/sdk": "^0.9.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.54.0",
+    "jest": "^29.7.0",
+    "netlify-cli": "^17.10.0"
   }
 }
