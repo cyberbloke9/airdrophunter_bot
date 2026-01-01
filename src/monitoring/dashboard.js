@@ -322,6 +322,7 @@ class Dashboard extends EventEmitter {
    * @returns {Object|null} Wallet status
    */
   getWalletStatus(address) {
+    if (!address) return null;
     return this.data.wallets.get(address.toLowerCase()) || null;
   }
 
@@ -476,15 +477,16 @@ class Dashboard extends EventEmitter {
   /**
    * Acknowledge an alert
    * @param {string} alertId - Alert ID
+   * @param {boolean} propagate - Whether to propagate to alert system (default true)
    */
-  acknowledgeAlert(alertId) {
+  acknowledgeAlert(alertId, propagate = true) {
     const index = this.data.alerts.active.findIndex(a => a.id === alertId);
     if (index !== -1) {
       this.data.alerts.active.splice(index, 1);
     }
 
-    // Also acknowledge in alert system
-    if (this.alertSystem) {
+    // Also acknowledge in alert system (but not if called from event listener)
+    if (propagate && this.alertSystem) {
       this.alertSystem.acknowledge(alertId);
     }
   }
@@ -611,7 +613,8 @@ class Dashboard extends EventEmitter {
       });
 
       this.alertSystem.on('alert:acknowledged', (alert) => {
-        this.acknowledgeAlert(alert.id);
+        // Don't propagate back to alertSystem to avoid circular loop
+        this.acknowledgeAlert(alert.id, false);
       });
     }
 
