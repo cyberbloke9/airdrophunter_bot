@@ -69,10 +69,12 @@ describe('Bridge Safety Module', () => {
     });
 
     test('should have transaction states', () => {
-      expect(BRIDGE_TX_STATE.PENDING).toBeDefined();
-      expect(BRIDGE_TX_STATE.SOURCE_CONFIRMED).toBeDefined();
-      expect(BRIDGE_TX_STATE.DEST_PENDING).toBeDefined();
-      expect(BRIDGE_TX_STATE.COMPLETED).toBeDefined();
+      expect(BRIDGE_TX_STATE.INITIATED).toBe('initiated');
+      expect(BRIDGE_TX_STATE.SOURCE_CONFIRMED).toBe('source_confirmed');
+      expect(BRIDGE_TX_STATE.DESTINATION_PENDING).toBe('destination_pending');
+      expect(BRIDGE_TX_STATE.COMPLETED).toBe('completed');
+      expect(BRIDGE_TX_STATE.FAILED).toBe('failed');
+      expect(BRIDGE_TX_STATE.STUCK).toBe('stuck');
     });
   });
 
@@ -83,7 +85,7 @@ describe('Bridge Safety Module', () => {
         bridgeId: 'arbitrum-canonical',
         sourceChainId: 1,
         destChainId: 42161,
-        amountWei: '1000000000000000000',
+        amount: '1000000000000000000',
         token: 'ETH',
       });
 
@@ -91,7 +93,7 @@ describe('Bridge Safety Module', () => {
       expect(tx.bridgeId).toBe('arbitrum-canonical');
       expect(tx.sourceChainId).toBe(1);
       expect(tx.destChainId).toBe(42161);
-      expect(tx.state).toBe(BRIDGE_TX_STATE.PENDING);
+      expect(tx.state).toBe(BRIDGE_TX_STATE.INITIATED);
     });
 
     test('should serialize to JSON', () => {
@@ -114,6 +116,7 @@ describe('Bridge Safety Module', () => {
       test('should create with default options', () => {
         const bs = new BridgeSafety();
         expect(bs).toBeDefined();
+        bs.stop();
       });
 
       test('should accept custom limits', () => {
@@ -123,6 +126,7 @@ describe('Bridge Safety Module', () => {
           },
         });
         expect(bs.config.limits.maxSingleTransactionUsd).toBe(50000);
+        bs.stop();
       });
     });
 
@@ -158,20 +162,20 @@ describe('Bridge Safety Module', () => {
       test('should select best bridge for route', () => {
         const result = bridgeSafety.selectBridge(1, 42161);
 
-        expect(result.bridge).toBeDefined();
-        expect(result.bridge.tier).not.toBe(BRIDGE_TIER.BLACKLISTED);
+        expect(result.selected).toBeDefined();
+        expect(result.selected.tier).not.toBe(BRIDGE_TIER.BLACKLISTED);
       });
 
       test('should prefer canonical bridges', () => {
         const result = bridgeSafety.selectBridge(1, 42161);
 
-        if (result.bridge) {
+        if (result.selected) {
           // If canonical exists for this route, it should be selected
           const allBridges = bridgeSafety.getAvailableBridges(1, 42161);
           const hasCanonical = allBridges.some(b => b.tier === BRIDGE_TIER.CANONICAL);
 
           if (hasCanonical) {
-            expect(result.bridge.tier).toBe(BRIDGE_TIER.CANONICAL);
+            expect(result.selected.tier).toBe(BRIDGE_TIER.CANONICAL);
           }
         }
       });
@@ -185,7 +189,7 @@ describe('Bridge Safety Module', () => {
 
       test('should handle unknown route', () => {
         const result = bridgeSafety.selectBridge(99999, 88888);
-        expect(result.bridge).toBeNull();
+        expect(result.selected).toBeNull();
       });
     });
 
@@ -213,11 +217,11 @@ describe('Bridge Safety Module', () => {
     describe('Transaction Validation', () => {
       test('should validate bridge transaction', async () => {
         const result = await bridgeSafety.validateBridgeTransaction('arbitrum-canonical', {
-          amountWei: '1000000000000000000', // 1 ETH
           amountUsd: 2000,
           token: 'ETH',
           sourceChainId: 1,
           destChainId: 42161,
+          portfolioValueUsd: 100000,
         });
 
         expect(result.valid).toBeDefined();
@@ -233,8 +237,8 @@ describe('Bridge Safety Module', () => {
 
         if (blacklistedId) {
           const result = await bridgeSafety.validateBridgeTransaction(blacklistedId, {
-            amountWei: '1000000000000000000',
             amountUsd: 2000,
+            portfolioValueUsd: 100000,
           });
 
           expect(result.valid).toBe(false);
@@ -245,7 +249,6 @@ describe('Bridge Safety Module', () => {
         const result = bridgeSafety.checkDailyVolume(10000, 3000);
 
         expect(result.allowed).toBeDefined();
-        expect(result.remaining).toBeDefined();
       });
     });
 
@@ -255,7 +258,7 @@ describe('Bridge Safety Module', () => {
           bridgeId: 'arbitrum-canonical',
           sourceChainId: 1,
           destChainId: 42161,
-          amountWei: '1000000000000000000',
+          amount: '1000000000000000000',
           token: 'ETH',
           sender: '0xSender',
           recipient: '0xRecipient',
@@ -263,7 +266,7 @@ describe('Bridge Safety Module', () => {
 
         expect(tx).toBeDefined();
         expect(tx.id).toBeDefined();
-        expect(tx.state).toBe(BRIDGE_TX_STATE.PENDING);
+        expect(tx.state).toBe(BRIDGE_TX_STATE.INITIATED);
       });
 
       test('should retrieve tracked transaction', () => {
@@ -271,7 +274,7 @@ describe('Bridge Safety Module', () => {
           bridgeId: 'arbitrum-canonical',
           sourceChainId: 1,
           destChainId: 42161,
-          amountWei: '1000000000000000000',
+          amount: '1000000000000000000',
         });
 
         const retrieved = bridgeSafety.getTransaction(tracked.id);
@@ -284,7 +287,7 @@ describe('Bridge Safety Module', () => {
           bridgeId: 'arbitrum-canonical',
           sourceChainId: 1,
           destChainId: 42161,
-          amountWei: '1000000000000000000',
+          amount: '1000000000000000000',
         });
 
         bridgeSafety.updateTransactionState(tx.id, BRIDGE_TX_STATE.SOURCE_CONFIRMED, {
@@ -300,14 +303,14 @@ describe('Bridge Safety Module', () => {
           bridgeId: 'arbitrum-canonical',
           sourceChainId: 1,
           destChainId: 42161,
-          amountWei: '1000000000000000000',
+          amount: '1000000000000000000',
         });
 
         bridgeSafety.trackBridgeTransaction({
           bridgeId: 'optimism-canonical',
           sourceChainId: 1,
           destChainId: 10,
-          amountWei: '2000000000000000000',
+          amount: '2000000000000000000',
         });
 
         const txs = bridgeSafety.getTransactions();
@@ -319,7 +322,7 @@ describe('Bridge Safety Module', () => {
           bridgeId: 'arbitrum-canonical',
           sourceChainId: 1,
           destChainId: 42161,
-          amountWei: '1000000000000000000',
+          amount: '1000000000000000000',
         });
 
         bridgeSafety.updateTransactionState(tx1.id, BRIDGE_TX_STATE.COMPLETED);
@@ -328,11 +331,11 @@ describe('Bridge Safety Module', () => {
           bridgeId: 'optimism-canonical',
           sourceChainId: 1,
           destChainId: 10,
-          amountWei: '2000000000000000000',
+          amount: '2000000000000000000',
         });
 
-        const pending = bridgeSafety.getTransactions({ state: BRIDGE_TX_STATE.PENDING });
-        expect(pending.length).toBe(1);
+        const initiated = bridgeSafety.getTransactions({ state: BRIDGE_TX_STATE.INITIATED });
+        expect(initiated.length).toBe(1);
       });
     });
 
@@ -340,7 +343,7 @@ describe('Bridge Safety Module', () => {
       test('should provide recovery info for bridge', () => {
         const recovery = bridgeSafety.getRecoveryInfo('arbitrum-canonical');
         expect(recovery).toBeDefined();
-        expect(recovery.docsUrl || recovery.recommendations).toBeDefined();
+        expect(recovery.recoveryDocs || recovery.recommendations).toBeDefined();
       });
 
       test('should return null for unknown bridge', () => {
@@ -373,11 +376,12 @@ describe('Bridge Safety Module', () => {
           bridgeId: 'arbitrum-canonical',
           sourceChainId: 1,
           destChainId: 42161,
-          amountWei: '1000000000000000000',
+          amount: '1000000000000000000',
         });
 
         const stats = bridgeSafety.getStatistics();
-        expect(stats.totalTransactions).toBeGreaterThanOrEqual(1);
+        expect(stats.totalBridged).toBeGreaterThanOrEqual(1);
+        expect(stats.activeTransactions).toBeGreaterThanOrEqual(1);
       });
     });
 
@@ -387,16 +391,23 @@ describe('Bridge Safety Module', () => {
           bridgeId: 'arbitrum-canonical',
           sourceChainId: 1,
           destChainId: 42161,
-          amountWei: '1000000000000000000',
+          amount: '1000000000000000000',
         });
 
-        // Manually set old timestamp for testing
-        const transaction = bridgeSafety.getTransaction(tx.id);
-        transaction.createdAt = Date.now() - (24 * 60 * 60 * 1000); // 24 hours ago
+        // Update to in-transit state first
+        bridgeSafety.updateTransactionState(tx.id, BRIDGE_TX_STATE.IN_TRANSIT);
+
+        // Manually set old timestamp for testing by accessing the internal transaction
+        const transaction = bridgeSafety.transactions.get(tx.id);
+        transaction.sourceConfirmedAt = Date.now() - (2 * 60 * 60 * 1000); // 2 hours ago
+
+        // Check for stuck transactions
+        bridgeSafety.checkStuckTransactions();
 
         const stuck = bridgeSafety.getStuckTransactions();
-        // May or may not be stuck depending on bridge config
         expect(Array.isArray(stuck)).toBe(true);
+        // Should be stuck since it's been 2 hours (default threshold is 1 hour)
+        expect(stuck.length).toBeGreaterThanOrEqual(1);
       });
     });
   });
@@ -405,6 +416,7 @@ describe('Bridge Safety Module', () => {
     test('should create instance with default options', () => {
       const bs = createBridgeSafety();
       expect(bs).toBeInstanceOf(BridgeSafety);
+      bs.stop();
     });
 
     test('should create instance with custom limits', () => {
@@ -414,6 +426,7 @@ describe('Bridge Safety Module', () => {
         },
       });
       expect(bs).toBeInstanceOf(BridgeSafety);
+      bs.stop();
     });
   });
 });
@@ -424,23 +437,23 @@ describe('Integration Tests', () => {
 
     // 1. Select bridge
     const selection = bs.selectBridge(1, 42161);
-    expect(selection.bridge).toBeDefined();
+    expect(selection.selected).toBeDefined();
 
     // 2. Validate transaction
-    const validation = await bs.validateBridgeTransaction(selection.bridge.id || 'arbitrum-canonical', {
-      amountWei: '1000000000000000000',
+    const validation = await bs.validateBridgeTransaction(selection.selected.id || 'arbitrum-canonical', {
       amountUsd: 2000,
       sourceChainId: 1,
       destChainId: 42161,
+      portfolioValueUsd: 100000,
     });
 
     if (validation.valid) {
       // 3. Track transaction
       const tx = bs.trackBridgeTransaction({
-        bridgeId: selection.bridge.id || 'arbitrum-canonical',
+        bridgeId: selection.selected.id || 'arbitrum-canonical',
         sourceChainId: 1,
         destChainId: 42161,
-        amountWei: '1000000000000000000',
+        amount: '1000000000000000000',
         amountUsd: 2000,
       });
 
@@ -461,7 +474,7 @@ describe('Integration Tests', () => {
 
       // 6. Check stats
       const stats = bs.getStatistics();
-      expect(stats.completed).toBeGreaterThanOrEqual(1);
+      expect(stats.successfulBridges).toBeGreaterThanOrEqual(1);
     }
 
     bs.stop();

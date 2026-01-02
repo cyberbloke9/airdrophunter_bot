@@ -499,7 +499,8 @@ describe('ERC-4337 Safety Module', () => {
     test('should reject blacklisted paymaster', () => {
       // Create verifier that doesn't require verification
       const permissiveVerifier = new PaymasterVerifier({ requireVerification: false });
-      const paymasterAddress = '0xBadPaymaster12345678901234567890123456';
+      // Use proper 42-character Ethereum address (0x + 40 hex chars)
+      const paymasterAddress = '0xBadBadBadBadBadBadBadBadBadBadBadBadBad1';
 
       permissiveVerifier.blacklistPaymaster(paymasterAddress, 'Exploit detected');
 
