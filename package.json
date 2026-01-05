@@ -1,9 +1,13 @@
 {
   "name": "airdrop-hunter-bot",
-  "version": "2.0.0",
+  "version": "3.1.0",
   "description": "AI-powered Web3 automation bot for token swaps, transfers, and airdrop hunting",
   "main": "src/index.js",
+  "bin": {
+    "airdrop-hunter": "./src/cli/index.js"
+  },
   "scripts": {
+    "cli": "node src/cli/index.js",
     "start": "node src/index.js",
     "dev": "netlify dev",
     "test": "jest",
