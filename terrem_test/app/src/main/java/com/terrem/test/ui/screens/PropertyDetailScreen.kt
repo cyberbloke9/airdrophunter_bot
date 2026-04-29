@@ -1,5 +1,7 @@
 package com.terrem.test.ui.screens
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -25,35 +28,37 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.terrem.test.data.model.SampleData
+import com.terrem.test.ui.TerremViewModel
+import com.terrem.test.ui.components.HeroImagePlaceholder
 import com.terrem.test.ui.theme.*
 
 @Composable
-fun PropertyDetailScreen(onBack: () -> Unit) {
-    val property = SampleData.detailProperty
+fun PropertyDetailScreen(viewModel: TerremViewModel, onBack: () -> Unit) {
+    val property = viewModel.detailProperty
     var selectedTab by remember { mutableIntStateOf(0) }
     var selectedHighlightTab by remember { mutableIntStateOf(0) }
+    var showFullDescription by remember { mutableStateOf(false) }
+    val isFav = viewModel.isFavorite(property.id)
 
     Box(modifier = Modifier.fillMaxSize().background(TerremBackground)) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = 80.dp)
+                .padding(bottom = 85.dp)
         ) {
-            // Hero image area
+            // Hero
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(320.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Color(0xFF6B8E7B), Color(0xFF8BA98F))
-                        )
-                    )
+                    .height(340.dp)
             ) {
-                Text("🏘️", fontSize = 64.sp, modifier = Modifier.align(Alignment.Center))
+                HeroImagePlaceholder(
+                    gradientColors = property.imageGradient,
+                    modifier = Modifier.fillMaxSize()
+                )
 
-                // Top actions
+                // Top navigation
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -61,10 +66,14 @@ fun PropertyDetailScreen(onBack: () -> Unit) {
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    IconCircle(Icons.Default.ArrowBack, onClick = onBack)
+                    ActionCircle(Icons.Default.ArrowBack, onClick = onBack)
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        IconCircle(Icons.Default.FavoriteBorder)
-                        IconCircle(Icons.Default.Share)
+                        ActionCircle(
+                            if (isFav) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            tint = if (isFav) TerremHotRed else TerremTextPrimary,
+                            onClick = { viewModel.toggleFavorite(property.id) }
+                        )
+                        ActionCircle(Icons.Default.Share)
                     }
                 }
 
@@ -72,26 +81,37 @@ fun PropertyDetailScreen(onBack: () -> Unit) {
                 Row(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(bottom = 12.dp)
-                        .horizontalScroll(rememberScrollState()),
+                        .padding(bottom = 16.dp)
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    repeat(6) {
+                    val thumbColors = listOf(
+                        Color(0xFF8B7355), Color(0xFF6B8E7B), Color(0xFF5A7A9B),
+                        Color(0xFFAA8866), Color(0xFF7B9A8B), Color(0xFF9B7B6B)
+                    )
+                    thumbColors.forEach { color ->
                         Box(
                             modifier = Modifier
                                 .size(48.dp)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(Color.White.copy(alpha = 0.4f))
+                                .background(color.copy(alpha = 0.6f))
+                                .border(1.5.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
                         )
                     }
                     Box(
                         modifier = Modifier
                             .size(48.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(Color.Black.copy(alpha = 0.5f)),
+                            .background(Color.Black.copy(alpha = 0.6f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("+10", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            "+${property.imageCount - 6}",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
@@ -100,22 +120,18 @@ fun PropertyDetailScreen(onBack: () -> Unit) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .offset(y = (-20).dp)
-                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                    .offset(y = (-24).dp)
+                    .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                     .background(Color.White)
-                    .padding(horizontal = 16.dp, vertical = 20.dp)
+                    .padding(horizontal = 18.dp, vertical = 22.dp)
             ) {
                 // Type badges
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TypeChip(property.type, TerremTextPrimary, Color(0xFFF0F0F0))
-                    TypeChip(
-                        property.constructionStatus,
-                        TerremUnderConstructionOrange,
-                        Color(0xFFFFF3E0)
-                    )
+                    TypeTag(property.type, TerremTextPrimary, TerremChipBg)
+                    TypeTag(property.constructionStatus, TerremUnderConstructionOrange, Color(0xFFFFF3E0))
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 // Title + rating
                 Row(
@@ -130,422 +146,471 @@ fun PropertyDetailScreen(onBack: () -> Unit) {
                         color = TerremTextPrimary,
                         modifier = Modifier.weight(1f)
                     )
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(TerremStar)
-                            .padding(horizontal = 10.dp, vertical = 5.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.Star,
-                                contentDescription = "Rating",
-                                tint = Color.White,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                "${property.rating}",
-                                color = Color.White,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(TerremStar)
+                                .padding(horizontal = 10.dp, vertical = 5.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Star, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text("${property.rating}", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("(${property.reviewCount})", fontSize = 13.sp, color = TerremTextSecondary)
                     }
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        "(${property.reviewCount})",
-                        fontSize = 13.sp,
-                        color = TerremTextSecondary
-                    )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-                // Description
+                // Description with expand
+                AnimatedContent(
+                    targetState = showFullDescription,
+                    transitionSpec = {
+                        fadeIn(tween(300)) + expandVertically(tween(300)) togetherWith
+                                fadeOut(tween(200)) + shrinkVertically(tween(200))
+                    },
+                    label = "desc"
+                ) { expanded ->
+                    Text(
+                        property.description,
+                        fontSize = 14.sp,
+                        color = TerremTextSecondary,
+                        lineHeight = 21.sp,
+                        maxLines = if (expanded) Int.MAX_VALUE else 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
                 Text(
-                    property.description,
-                    fontSize = 14.sp,
-                    color = TerremTextSecondary,
-                    lineHeight = 20.sp,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    "Read More",
+                    if (showFullDescription) "Show Less" else "Read More",
                     fontSize = 14.sp,
                     color = TerremTeal,
                     fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.clickable { }
+                    modifier = Modifier.clickable { showFullDescription = !showFullDescription }
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 // Verification badges
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    VerificationBadge("RERA", Icons.Outlined.CheckCircle, TerremGreen)
-                    VerificationBadge("Verified", Icons.Outlined.CheckCircle, TerremGreen)
-                    VerificationBadge("Tenant", Icons.Outlined.CheckCircle, TerremGreen)
+                    if (property.isRera) VerifPill("RERA", TerremGreen)
+                    if (property.isVerified) VerifPill("Verified", TerremGreen)
+                    if (property.hasTenant) VerifPill("Tenant", TerremGreen)
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
-                // Location and delivery
+                // Location + delivery
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.Top
                 ) {
-                    Row(verticalAlignment = Alignment.Top) {
-                        Text("📍 ", fontSize = 13.sp)
-                        Text(
-                            property.location,
-                            fontSize = 13.sp,
-                            color = TerremTextSecondary,
-                            lineHeight = 18.sp
-                        )
+                    Row(
+                        verticalAlignment = Alignment.Top,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Outlined.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp), tint = TerremTextSecondary)
+                        Spacer(modifier = Modifier.width(2.dp))
+                        Text(property.location, fontSize = 13.sp, color = TerremTextSecondary, lineHeight = 18.sp)
                         Spacer(modifier = Modifier.width(8.dp))
                         Box(
                             modifier = Modifier
                                 .size(28.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFFF0F0F0)),
+                                .background(TerremChipBg),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                Icons.Default.Navigation,
-                                contentDescription = "Navigate",
-                                modifier = Modifier.size(14.dp),
-                                tint = TerremTextSecondary
-                            )
+                            Icon(Icons.Default.Navigation, contentDescription = null, modifier = Modifier.size(14.dp), tint = TerremTextSecondary)
                         }
                     }
                     Column(horizontalAlignment = Alignment.End) {
                         Text("Delivery:", fontSize = 12.sp, color = TerremTextSecondary)
-                        Text(
-                            property.deliveryDate,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TerremTextPrimary
+                        Text(property.deliveryDate, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TerremTextPrimary)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(22.dp))
+
+                // Tabs
+                val tabs = listOf("Property Snapshot", "Highlights", "Rental Overview")
+                ScrollableTabRow(
+                    selectedTabIndex = selectedTab,
+                    containerColor = Color.Transparent,
+                    contentColor = TerremPrimary,
+                    edgePadding = 0.dp,
+                    divider = { HorizontalDivider(color = TerremDivider) },
+                    indicator = { tabPositions ->
+                        if (selectedTab < tabPositions.size) {
+                            TabRowDefaults.SecondaryIndicator(
+                                modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                                height = 3.dp,
+                                color = TerremTeal
+                            )
+                        }
+                    }
+                ) {
+                    tabs.forEachIndexed { index, title ->
+                        Tab(
+                            selected = selectedTab == index,
+                            onClick = { selectedTab = index },
+                            text = {
+                                Text(
+                                    title,
+                                    fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
+                                    fontSize = 14.sp
+                                )
+                            },
+                            selectedContentColor = TerremPrimary,
+                            unselectedContentColor = TerremTextSecondary
                         )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Tab bar: Property Snapshot | Highlights | Rental Overview
-                val tabs = listOf("Property Snapshot", "Highlights", "Rental Overview")
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    tabs.forEachIndexed { index, title ->
-                        Column(
-                            modifier = Modifier
-                                .clickable { selectedTab = index }
-                                .padding(bottom = 8.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                title,
-                                fontSize = 14.sp,
-                                fontWeight = if (index == selectedTab) FontWeight.Bold else FontWeight.Normal,
-                                color = if (index == selectedTab) TerremPrimary else TerremTextSecondary
-                            )
-                            if (index == selectedTab) {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .width(60.dp)
-                                        .height(2.dp)
-                                        .background(TerremTeal)
-                                )
-                            }
-                        }
+                // Tab content with crossfade
+                AnimatedContent(
+                    targetState = selectedTab,
+                    transitionSpec = {
+                        fadeIn(tween(300)) togetherWith fadeOut(tween(200))
+                    },
+                    label = "tab_content"
+                ) { tab ->
+                    when (tab) {
+                        0 -> PropertySnapshotContent(property)
+                        1 -> HighlightsContent(property, selectedHighlightTab) { selectedHighlightTab = it }
+                        2 -> RentalOverviewContent()
                     }
                 }
-
-                HorizontalDivider(color = TerremDivider)
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Property Snapshot content
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        "Property Snapshot",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TerremTextPrimary
-                    )
-                    Button(
-                        onClick = { },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = TerremTextPrimary,
-                            contentColor = Color.White
-                        ),
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        Text("Visit Property", fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Unit Details
-                DetailSection("Unit Details") {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            DetailItem(Icons.Outlined.KingBed, "BHK Type", property.bhkType)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            DetailItem(Icons.Outlined.Weekend, "Interior Status", property.interiorStatus)
-                        }
-                        Column(modifier = Modifier.weight(1f)) {
-                            DetailItem(Icons.Outlined.Explore, "Facing", property.facing)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            DetailItem(Icons.Outlined.Stairs, "Floor No", property.floorNo)
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Project Details
-                DetailSection("Project Details") {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            DetailItem(Icons.Outlined.Landscape, "Land Area", property.landArea)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            DetailItem(Icons.Outlined.SquareFoot, "Carpet Area", property.carpetArea)
-                        }
-                        Column(modifier = Modifier.weight(1f)) {
-                            DetailItem(Icons.Outlined.ZoomOutMap, "Built-up Area", property.builtUpArea)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            DetailItem(Icons.Outlined.CropFree, "Common Area", property.commonArea)
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Highlights section
-                Text(
-                    "Highlights",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TerremTextPrimary
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Property / Features / Location tabs
-                val highlightTabs = listOf("Property", "Features", "Location")
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(Color(0xFFF2F2F2))
-                        .padding(4.dp)
-                ) {
-                    highlightTabs.forEachIndexed { index, title ->
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(
-                                    if (index == selectedHighlightTab) TerremPrimary
-                                    else Color.Transparent
-                                )
-                                .clickable { selectedHighlightTab = index }
-                                .padding(vertical = 10.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                title,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = if (index == selectedHighlightTab) Color.White
-                                else TerremTextSecondary
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Highlight chips
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    property.highlights.forEach { highlight ->
-                        HighlightChip(highlight)
-                    }
-                    HighlightChip("+30 More", isMore = true)
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Rental Overview
-                Text(
-                    "Rental Overview",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TerremTextPrimary
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Govt Value / Market Value
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .border(1.dp, TerremDivider, RoundedCornerShape(12.dp))
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            Icons.Outlined.Home,
-                            contentDescription = null,
-                            tint = TerremTextSecondary,
-                            modifier = Modifier.size(28.dp)
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text("Govt Value", fontSize = 12.sp, color = TerremTextSecondary)
-                        Text("₹55L", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TerremTextPrimary)
-                    }
-                    Box(
-                        modifier = Modifier
-                            .width(1.dp)
-                            .height(60.dp)
-                            .background(TerremDivider)
-                    )
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            Icons.Outlined.TrendingUp,
-                            contentDescription = null,
-                            tint = TerremTextSecondary,
-                            modifier = Modifier.size(28.dp)
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text("Market Value", fontSize = 12.sp, color = TerremTextSecondary)
-                        Text("₹64L", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TerremTextPrimary)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(40.dp))
             }
         }
 
         // Bottom price bar
-        Row(
+        Surface(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .background(Color.White)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxWidth(),
+            shadowElevation = 16.dp,
+            color = Color.White
         ) {
-            Column {
-                Text(
-                    property.totalPrice,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TerremPrimary
-                )
-                Text(
-                    "(excl registration fees & taxes etc)",
-                    fontSize = 11.sp,
-                    color = TerremTextSecondary
-                )
-            }
-            Button(
-                onClick = { },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = TerremTextPrimary,
-                    contentColor = Color.White
-                ),
-                shape = RoundedCornerShape(12.dp),
-                contentPadding = PaddingValues(horizontal = 32.dp, vertical = 14.dp)
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = 18.dp, vertical = 14.dp)
+                    .navigationBarsPadding(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Book Now", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Column {
+                    Text(
+                        property.totalPrice,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TerremPrimary
+                    )
+                    Text(
+                        "(excl registration fees & taxes etc)",
+                        fontSize = 11.sp,
+                        color = TerremTextSecondary
+                    )
+                }
+                Button(
+                    onClick = { },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = TerremTextPrimary,
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 34.dp, vertical = 14.dp),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+                ) {
+                    Text("Book Now", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }
 }
 
 @Composable
-private fun IconCircle(icon: ImageVector, onClick: () -> Unit = {}) {
-    Box(
-        modifier = Modifier
-            .size(40.dp)
-            .clip(CircleShape)
-            .background(Color.White.copy(alpha = 0.7f))
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(22.dp), tint = TerremTextPrimary)
+private fun PropertySnapshotContent(property: com.terrem.test.data.model.Property) {
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Property Snapshot", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TerremTextPrimary)
+            Button(
+                onClick = { },
+                colors = ButtonDefaults.buttonColors(containerColor = TerremTextPrimary, contentColor = Color.White),
+                shape = RoundedCornerShape(8.dp),
+                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 9.dp),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+            ) {
+                Text("Visit Property", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        DetailCard("Unit Details") {
+            DetailRow(
+                left = { DetailItem(Icons.Outlined.KingBed, "BHK Type", property.bhkType) },
+                right = { DetailItem(Icons.Outlined.Explore, "Facing", property.facing) }
+            )
+            Spacer(modifier = Modifier.height(18.dp))
+            DetailRow(
+                left = { DetailItem(Icons.Outlined.Weekend, "Interior Status", property.interiorStatus) },
+                right = { DetailItem(Icons.Outlined.Stairs, "Floor No", property.floorNo) }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        DetailCard("Project Details") {
+            DetailRow(
+                left = { DetailItem(Icons.Outlined.Landscape, "Land Area", property.landArea) },
+                right = { DetailItem(Icons.Outlined.ZoomOutMap, "Built-up Area", property.builtUpArea) }
+            )
+            Spacer(modifier = Modifier.height(18.dp))
+            DetailRow(
+                left = { DetailItem(Icons.Outlined.SquareFoot, "Carpet Area", property.carpetArea) },
+                right = { DetailItem(Icons.Outlined.CropFree, "Common Area", property.commonArea) }
+            )
+        }
     }
 }
 
 @Composable
-private fun TypeChip(text: String, textColor: Color, bgColor: Color) {
+private fun HighlightsContent(
+    property: com.terrem.test.data.model.Property,
+    selectedTab: Int,
+    onTabChange: (Int) -> Unit
+) {
+    Column {
+        Text("Highlights", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TerremTextPrimary)
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        val highlightTabs = listOf("Property", "Features", "Location")
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(28.dp))
+                .background(TerremChipBg)
+                .padding(4.dp)
+        ) {
+            highlightTabs.forEachIndexed { index, title ->
+                val isSelected = index == selectedTab
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(
+                            animateColorAsState(
+                                if (isSelected) TerremPrimary else Color.Transparent,
+                                tween(250), label = "hl_bg"
+                            ).value
+                        )
+                        .clickable { onTabChange(index) }
+                        .padding(vertical = 11.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        title,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = animateColorAsState(
+                            if (isSelected) Color.White else TerremTextSecondary,
+                            tween(250), label = "hl_text"
+                        ).value
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        androidx.compose.foundation.layout.FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            property.highlights.forEach { hl ->
+                HighlightChip(hl)
+            }
+            val remaining = 30 - property.highlights.size
+            if (remaining > 0) {
+                HighlightChip("+$remaining More", isMore = true)
+            }
+        }
+    }
+}
+
+@Composable
+private fun RentalOverviewContent() {
+    Column {
+        Text("Rental Overview", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TerremTextPrimary)
+        Spacer(modifier = Modifier.height(14.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .border(1.dp, TerremDivider, RoundedCornerShape(14.dp))
+                .padding(20.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(TerremChipBg),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Outlined.Home, contentDescription = null, tint = TerremTextSecondary, modifier = Modifier.size(24.dp))
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Govt Value", fontSize = 12.sp, color = TerremTextSecondary)
+                Text("₹55L", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TerremTextPrimary)
+            }
+            Box(modifier = Modifier.width(1.dp).height(80.dp).background(TerremDivider))
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(TerremChipBg),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Outlined.TrendingUp, contentDescription = null, tint = TerremTextSecondary, modifier = Modifier.size(24.dp))
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Market Value", fontSize = 12.sp, color = TerremTextSecondary)
+                Text("₹64L", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TerremTextPrimary)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Monthly rental estimate
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(Color(0xFFF0FAF5))
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text("Expected Monthly Rental", fontSize = 13.sp, color = TerremTextSecondary)
+                Text("₹25,000 - ₹30,000", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TerremGreen)
+            }
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(TerremGreen.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Outlined.AccountBalance, contentDescription = null, tint = TerremGreen, modifier = Modifier.size(22.dp))
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Occupancy rate
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .border(1.dp, TerremDivider, RoundedCornerShape(14.dp))
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text("Occupancy Rate", fontSize = 13.sp, color = TerremTextSecondary)
+                Text("95%", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = TerremTextPrimary)
+            }
+            Column {
+                Text("Rental Yield", fontSize = 13.sp, color = TerremTextSecondary)
+                Text("7.2%", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = TerremTeal)
+            }
+        }
+    }
+}
+
+// ---- Sub-components ----
+
+@Composable
+private fun ActionCircle(icon: ImageVector, tint: Color = TerremTextPrimary, onClick: () -> Unit = {}) {
+    Box(
+        modifier = Modifier
+            .size(42.dp)
+            .shadow(4.dp, CircleShape)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.85f))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(22.dp), tint = tint)
+    }
+}
+
+@Composable
+private fun TypeTag(text: String, textColor: Color, bgColor: Color) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(16.dp))
             .background(bgColor)
             .padding(horizontal = 14.dp, vertical = 6.dp)
     ) {
-        Text(text, fontSize = 13.sp, color = textColor, fontWeight = FontWeight.Medium)
+        Text(text, fontSize = 13.sp, color = textColor, fontWeight = FontWeight.SemiBold)
     }
 }
 
 @Composable
-private fun VerificationBadge(text: String, icon: ImageVector, color: Color) {
+private fun VerifPill(text: String, color: Color) {
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(20.dp))
-            .border(1.dp, TerremDivider, RoundedCornerShape(20.dp))
+            .border(1.2.dp, TerremDivider, RoundedCornerShape(20.dp))
             .padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
+        Icon(Icons.Outlined.CheckCircle, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
         Spacer(modifier = Modifier.width(4.dp))
-        Text(text, fontSize = 13.sp, color = TerremTextPrimary, fontWeight = FontWeight.Medium)
+        Text(text, fontSize = 13.sp, color = TerremTextPrimary, fontWeight = FontWeight.SemiBold)
     }
 }
 
 @Composable
-private fun DetailSection(title: String, content: @Composable () -> Unit) {
+private fun DetailCard(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .border(1.dp, TerremDivider, RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(14.dp))
+            .border(1.dp, TerremDivider, RoundedCornerShape(14.dp))
             .padding(16.dp)
     ) {
-        Text(
-            title,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
-            color = TerremTextPrimary
-        )
-        Spacer(modifier = Modifier.height(12.dp))
+        Text(title, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TerremTextPrimary)
+        Spacer(modifier = Modifier.height(14.dp))
         content()
+    }
+}
+
+@Composable
+private fun DetailRow(left: @Composable () -> Unit, right: @Composable () -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth()) {
+        Box(modifier = Modifier.weight(1f)) { left() }
+        Box(modifier = Modifier.weight(1f)) { right() }
     }
 }
 
@@ -554,14 +619,14 @@ private fun DetailItem(icon: ImageVector, label: String, value: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier
-                .size(36.dp)
+                .size(38.dp)
                 .clip(CircleShape)
-                .background(Color(0xFFF5F5F5)),
+                .background(TerremChipBg),
             contentAlignment = Alignment.Center
         ) {
             Icon(icon, contentDescription = label, modifier = Modifier.size(18.dp), tint = TerremTextSecondary)
         }
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(10.dp))
         Column {
             Text(label, fontSize = 11.sp, color = TerremTextSecondary)
             Text(value, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TerremTextPrimary)
@@ -579,12 +644,7 @@ private fun HighlightChip(text: String, isMore: Boolean = false) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (!isMore) {
-            Icon(
-                Icons.Default.Check,
-                contentDescription = null,
-                tint = TerremTextSecondary,
-                modifier = Modifier.size(16.dp)
-            )
+            Icon(Icons.Default.Check, contentDescription = null, tint = TerremTextSecondary, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(4.dp))
         }
         Text(
@@ -594,20 +654,4 @@ private fun HighlightChip(text: String, isMore: Boolean = false) {
             fontWeight = FontWeight.Medium
         )
     }
-}
-
-@Composable
-private fun FlowRow(
-    modifier: Modifier = Modifier,
-    horizontalArrangement: Arrangement.Horizontal = Arrangement.Start,
-    verticalArrangement: Arrangement.Vertical = Arrangement.Top,
-    content: @Composable () -> Unit
-) {
-    // Using built-in FlowRow from Compose Foundation
-    androidx.compose.foundation.layout.FlowRow(
-        modifier = modifier,
-        horizontalArrangement = horizontalArrangement,
-        verticalArrangement = verticalArrangement,
-        content = { content() }
-    )
 }

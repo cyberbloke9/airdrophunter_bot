@@ -1,21 +1,30 @@
 package com.terrem.test.ui.components
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.CropSquare
+import androidx.compose.material.icons.outlined.Percent
+import androidx.compose.material.icons.outlined.TrendingUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -24,34 +33,34 @@ import com.terrem.test.data.model.Property
 import com.terrem.test.ui.theme.*
 
 @Composable
-fun RecentActivityCard(property: Property, onClick: () -> Unit) {
+fun RecentActivityCard(
+    property: Property,
+    isFavorite: Boolean,
+    onClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.Top
     ) {
-        // Image placeholder
-        Box(
-            modifier = Modifier
-                .size(width = 140.dp, height = 110.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(Color(0xFFD4C5B0)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("🏠", fontSize = 32.sp)
-        }
+        PropertyImagePlaceholder(
+            gradientColors = property.imageGradient,
+            modifier = Modifier.size(width = 140.dp, height = 115.dp),
+            cornerRadius = 14.dp,
+            iconSize = 32.dp,
+            propertyType = property.type
+        )
 
         Spacer(modifier = Modifier.width(12.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            // Property type badge
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFFF0F0F0))
-                    .padding(horizontal = 12.dp, vertical = 4.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(TerremChipBg)
+                    .padding(horizontal = 14.dp, vertical = 5.dp)
             ) {
                 Text(
                     property.type,
@@ -61,7 +70,7 @@ fun RecentActivityCard(property: Property, onClick: () -> Unit) {
                 )
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(5.dp))
 
             Text(
                 property.name,
@@ -72,19 +81,25 @@ fun RecentActivityCard(property: Property, onClick: () -> Unit) {
                 overflow = TextOverflow.Ellipsis
             )
 
-            Text(
-                property.price,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = TerremGold
-            )
-            Text(
-                property.priceLabel,
-                fontSize = 12.sp,
-                color = TerremTextSecondary
-            )
-
             Spacer(modifier = Modifier.height(2.dp))
+
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    property.price,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TerremGold
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    property.priceLabel,
+                    fontSize = 11.sp,
+                    color = TerremTextSecondary,
+                    modifier = Modifier.padding(bottom = 2.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
 
             Text(
                 property.location,
@@ -94,59 +109,40 @@ fun RecentActivityCard(property: Property, onClick: () -> Unit) {
             )
         }
 
-        // Navigate icon
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(Color(0xFFF0F0F0))
-                .align(Alignment.Bottom),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                Icons.Default.Navigation,
-                contentDescription = "Navigate",
-                modifier = Modifier.size(18.dp).rotate(45f),
-                tint = TerremTextSecondary
-            )
-        }
+        NavigateButton(modifier = Modifier.align(Alignment.Bottom))
     }
 }
 
 @Composable
-fun RecommendationCard(property: Property, onClick: () -> Unit) {
+fun RecommendationCard(
+    property: Property,
+    isFavorite: Boolean,
+    onFavoriteClick: () -> Unit,
+    onClick: () -> Unit
+) {
     Card(
         modifier = Modifier
             .width(320.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column {
-            // Image area with badges
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(200.dp)
-                    .background(Color(0xFF8B7355))
+                    .height(210.dp)
             ) {
-                // Placeholder gradient
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            androidx.compose.ui.graphics.Brush.verticalGradient(
-                                colors = listOf(
-                                    Color(0xFF5A4A3A),
-                                    Color(0xFF8B7355)
-                                )
-                            )
-                        )
+                PropertyImagePlaceholder(
+                    gradientColors = property.imageGradient,
+                    modifier = Modifier.fillMaxSize(),
+                    cornerRadius = 0.dp,
+                    iconSize = 48.dp,
+                    propertyType = property.type
                 )
-                Text("🏡", fontSize = 48.sp, modifier = Modifier.align(Alignment.Center))
 
-                // Badges row
+                // Badges
                 Row(
                     modifier = Modifier
                         .align(Alignment.TopStart)
@@ -154,47 +150,41 @@ fun RecommendationCard(property: Property, onClick: () -> Unit) {
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     if (property.isRera) {
-                        Badge(text = "RERA", bgColor = TerremReraBg)
+                        VerifBadge("RERA", TerremReraBg)
                     }
                     if (property.isVerified) {
-                        Badge(text = "Verified", bgColor = TerremVerifiedBg)
+                        VerifBadge("Verified", TerremVerifiedBg)
                     }
                 }
 
-                // Heart icon
-                Box(
+                // Favorite
+                FavoriteButton(
+                    isFavorite = isFavorite,
+                    onClick = onFavoriteClick,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(12.dp)
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(Color.White),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.FavoriteBorder,
-                        contentDescription = "Favorite",
-                        modifier = Modifier.size(20.dp),
-                        tint = TerremTextPrimary
-                    )
-                }
+                )
 
-                // Stats row at bottom
+                // Stats overlay
                 Row(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
                         .fillMaxWidth()
-                        .background(Color.Black.copy(alpha = 0.3f))
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.65f))
+                            )
+                        )
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    StatItem("📊", property.returnPercent)
-                    StatItem("💰", property.appreciationPercent)
-                    StatItem("📐", property.sqft)
+                    StatItem(Icons.Outlined.TrendingUp, property.returnPercent)
+                    StatItem(Icons.Outlined.Percent, property.appreciationPercent)
+                    StatItem(Icons.Outlined.CropSquare, property.sqft)
                 }
             }
 
-            // Content area
             Column(modifier = Modifier.padding(14.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -209,18 +199,24 @@ fun RecommendationCard(property: Property, onClick: () -> Unit) {
                     )
                     if (property.isHot) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("● ", color = TerremHotRed, fontSize = 10.sp)
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(TerremHotRed)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 "Hot",
                                 color = TerremHotRed,
                                 fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Progress bar
                 Row(
@@ -230,42 +226,50 @@ fun RecommendationCard(property: Property, onClick: () -> Unit) {
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp))
+                            .height(7.dp)
+                            .clip(RoundedCornerShape(4.dp))
                             .background(TerremProgressBg)
                     ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .fillMaxWidth(property.soldFractions.toFloat() / property.totalFractions)
-                                .clip(RoundedCornerShape(3.dp))
-                                .background(TerremProgressFill)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(
+                                    Brush.horizontalGradient(
+                                        colors = listOf(TerremTeal, TerremProgressFill)
+                                    )
+                                )
                         )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
                     Text(
                         "${property.soldFractions}/${property.totalFractions} Sold",
                         fontSize = 12.sp,
                         color = TerremTextSecondary,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-                Text(
-                    property.price,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TerremTextPrimary
-                )
-                Text(
-                    property.priceLabel,
-                    fontSize = 13.sp,
-                    color = TerremTextSecondary
-                )
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        property.price,
+                        fontSize = 21.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TerremTextPrimary
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        property.priceLabel,
+                        fontSize = 13.sp,
+                        color = TerremTextSecondary,
+                        modifier = Modifier.padding(bottom = 2.dp)
+                    )
+                }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -279,20 +283,7 @@ fun RecommendationCard(property: Property, onClick: () -> Unit) {
                         lineHeight = 16.sp,
                         modifier = Modifier.weight(1f)
                     )
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFFF0F0F0)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Navigation,
-                            contentDescription = "Navigate",
-                            modifier = Modifier.size(18.dp).rotate(45f),
-                            tint = TerremTextSecondary
-                        )
-                    }
+                    NavigateButton()
                 }
             }
         }
@@ -300,60 +291,60 @@ fun RecommendationCard(property: Property, onClick: () -> Unit) {
 }
 
 @Composable
-fun TrendingPropertyCard(property: Property, onClick: () -> Unit) {
+fun TrendingPropertyCard(
+    property: Property,
+    isFavorite: Boolean,
+    onFavoriteClick: () -> Unit,
+    onClick: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Column {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(150.dp)
-                    .background(Color(0xFF8B7355))
+                    .height(155.dp)
             ) {
-                Text("🏠", fontSize = 36.sp, modifier = Modifier.align(Alignment.Center))
+                PropertyImagePlaceholder(
+                    gradientColors = property.imageGradient,
+                    modifier = Modifier.fillMaxSize(),
+                    cornerRadius = 0.dp,
+                    iconSize = 32.dp,
+                    propertyType = property.type
+                )
 
-                // Sold percentage badge
                 if (property.soldPercent > 0) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopStart)
                             .padding(8.dp)
                             .clip(RoundedCornerShape(6.dp))
-                            .background(TerremGreen)
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .background(TerremGreenBadge)
+                            .padding(horizontal = 9.dp, vertical = 4.dp)
                     ) {
                         Text(
                             "(${property.soldPercent}% Sold)",
                             color = Color.White,
                             fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
 
-                // Heart icon
-                Box(
+                FavoriteButton(
+                    isFavorite = isFavorite,
+                    onClick = onFavoriteClick,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(8.dp)
-                        .size(30.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.9f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.FavoriteBorder,
-                        contentDescription = "Favorite",
-                        modifier = Modifier.size(16.dp),
-                        tint = TerremTextPrimary
-                    )
-                }
+                        .padding(8.dp),
+                    size = 30
+                )
             }
 
             Column(modifier = Modifier.padding(10.dp)) {
@@ -366,7 +357,7 @@ fun TrendingPropertyCard(property: Property, onClick: () -> Unit) {
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(3.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -377,7 +368,13 @@ fun TrendingPropertyCard(property: Property, onClick: () -> Unit) {
                         modifier = Modifier.weight(1f),
                         verticalAlignment = Alignment.Top
                     ) {
-                        Text("📍 ", fontSize = 11.sp)
+                        Icon(
+                            Icons.Outlined.CheckCircle,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp).padding(top = 2.dp),
+                            tint = TerremTextTertiary
+                        )
+                        Spacer(modifier = Modifier.width(3.dp))
                         Text(
                             property.location,
                             fontSize = 11.sp,
@@ -387,53 +384,100 @@ fun TrendingPropertyCard(property: Property, onClick: () -> Unit) {
                             overflow = TextOverflow.Ellipsis
                         )
                     }
-                    Box(
-                        modifier = Modifier
-                            .size(28.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFFF0F0F0)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Navigation,
-                            contentDescription = "Navigate",
-                            modifier = Modifier.size(14.dp).rotate(45f),
-                            tint = TerremTextSecondary
-                        )
-                    }
+                    NavigateButton(size = 28)
                 }
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                Text(
-                    property.price,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TerremTextPrimary
-                )
-                Text(
-                    property.priceLabel,
-                    fontSize = 11.sp,
-                    color = TerremTextSecondary
-                )
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        property.price,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TerremTextPrimary
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        property.priceLabel,
+                        fontSize = 11.sp,
+                        color = TerremTextSecondary,
+                        modifier = Modifier.padding(bottom = 2.dp)
+                    )
+                }
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SmallChip("📐 ${property.sqft}")
-                    SmallChip("📊 ${property.returnPercent}")
+                    SmallInfoChip("📐 ${property.sqft}")
+                    SmallInfoChip("📊 ${property.returnPercent}")
                 }
             }
         }
     }
 }
 
+// ---- Shared sub-components ----
+
 @Composable
-private fun Badge(text: String, bgColor: Color) {
+fun FavoriteButton(
+    isFavorite: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    size: Int = 36
+) {
+    Box(
+        modifier = modifier
+            .size(size.dp)
+            .shadow(2.dp, CircleShape)
+            .clip(CircleShape)
+            .background(Color.White)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        AnimatedContent(
+            targetState = isFavorite,
+            transitionSpec = {
+                scaleIn(animationSpec = tween(200)) togetherWith
+                        scaleOut(animationSpec = tween(200))
+            },
+            label = "fav"
+        ) { fav ->
+            Icon(
+                if (fav) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                contentDescription = "Favorite",
+                modifier = Modifier.size((size * 0.55f).dp),
+                tint = if (fav) TerremHotRed else TerremTextPrimary
+            )
+        }
+    }
+}
+
+@Composable
+fun NavigateButton(modifier: Modifier = Modifier, size: Int = 36) {
+    Box(
+        modifier = modifier
+            .size(size.dp)
+            .clip(CircleShape)
+            .background(TerremChipBg),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            Icons.Default.Navigation,
+            contentDescription = "Navigate",
+            modifier = Modifier
+                .size((size * 0.5f).dp)
+                .rotate(45f),
+            tint = TerremTextSecondary
+        )
+    }
+}
+
+@Composable
+private fun VerifBadge(text: String, bgColor: Color) {
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(16.dp))
-            .background(bgColor.copy(alpha = 0.85f))
+            .background(bgColor.copy(alpha = 0.9f))
             .padding(horizontal = 10.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -444,27 +488,27 @@ private fun Badge(text: String, bgColor: Color) {
             modifier = Modifier.size(14.dp)
         )
         Spacer(modifier = Modifier.width(4.dp))
-        Text(text, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        Text(text, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
 @Composable
-private fun StatItem(icon: String, value: String) {
+private fun StatItem(icon: ImageVector, value: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(icon, fontSize = 14.sp)
+        Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White.copy(alpha = 0.85f))
         Spacer(modifier = Modifier.width(4.dp))
-        Text(value, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Text(value, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
 @Composable
-private fun SmallChip(text: String) {
+private fun SmallInfoChip(text: String) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFFF2F2F2))
+            .background(TerremChipBg)
             .padding(horizontal = 10.dp, vertical = 5.dp)
     ) {
-        Text(text, fontSize = 11.sp, color = TerremTextSecondary)
+        Text(text, fontSize = 11.sp, color = TerremTextSecondary, fontWeight = FontWeight.Medium)
     }
 }
